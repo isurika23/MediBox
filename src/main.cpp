@@ -445,6 +445,7 @@ void set_alarm(int alarm){
     }
   }
   
+  alarm_triggered[alarm] = false;
   display.clearDisplay();
   print_line("Alarm is set", 0, 0, 2);
   delay(1000);
@@ -525,7 +526,11 @@ void view_active_alarms(){
   while(true){
     int active_alarms = 0;
     display.clearDisplay();
+    
     for (int i = 0; i < n_alarm; i++){
+      if(!alarm_enabled){
+        break;
+      }
       if(!alarm_triggered[i] && alarm_hours[i] != -1 && alarm_minutes[i] != -1){
         active_alarms++;
         print_line("Alarm " + String(i + 1) + ": " + String(alarm_hours[i]) + ":" + String(alarm_minutes[i]), 0, i * 10, 1);
