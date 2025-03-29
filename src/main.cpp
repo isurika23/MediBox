@@ -34,6 +34,7 @@ void run_mode(int mode);
 void set_time();
 void set_alarm(int alarm_number);
 void check_temp();
+void set_timezone();
 
 // Time global variables
 int days = 0;
@@ -65,18 +66,19 @@ int n_notes = 8;
 
 // Modes variables
 int current_mode = 0;
-int max_modes = 4;
 String modes[] = {
-  "1 - Set time",
-  "2 - Set Alarm 1",
-  "3 - Set Alarm 2",
-  "4 - Disable Alarms"
+  "1 - Set timezone",
+  "2 - Set time",
+  "3 - Set Alarm 1",
+  "4 - Set Alarm 2",
+  "5 - Disable Alarms"
 };
+int max_modes = sizeof(modes)/sizeof(modes[0]);
 
 // Time server variables
 #define NTP_SERVER     "pool.ntp.org"
-#define UTC_OFFSET     5*3600
-#define UTC_OFFSET_DST 0.5*3600
+float UTC_OFFSET = 0.0; // UTC offset in hours
+#define UTC_OFFSET_DST 0 // UTC offset in hours for DST
 
 void setup() {
   Serial.begin(9600);
@@ -105,6 +107,7 @@ void setup() {
     delay(250);
     display.clearDisplay();
     print_line("Connecting to WiFi...", 0, 0, 2);
+    delay(500);
   }
 
   display.clearDisplay();
@@ -120,6 +123,7 @@ void setup() {
   display.clearDisplay();
 
   print_time_now();
+  Serial.println("Max_modes: "+String(max_modes));
   
 }
 
@@ -163,6 +167,7 @@ void update_time(){
   if(!getLocalTime(&timeinfo)){
     display.clearDisplay();
     print_line("Connection Err", 0, 0, 2);
+    delay(1000);
     return;
   }
 
@@ -283,13 +288,16 @@ void run_mode(int mode){
 
   switch(mode){
     case 0:
-      set_time();
+      set_timezone();
       break;
     case 1:
+      set_time();
+      break;
     case 2:
+    case 3:
       set_alarm(mode-1);
       break;
-    case 3:
+    case 4:
       alarm_enabled = false;
       display.clearDisplay();
       print_line("Disabled Alarms", 0, 0, 2);
@@ -437,23 +445,69 @@ void set_alarm(int alarm){
 
 void check_temp(){
   TempAndHumidity data = dhtSensor.getTempAndHumidity();
-  if (data.temperature > 35){
+  if (data.temperature > 32){
     display.clearDisplay();
     print_line("TEMP HIGH", 0, 40, 1);
     delay(500);
-  } else if (data.temperature < 25){
+  } else if (data.temperature < 24){
     display.clearDisplay();
     print_line("TEMP LOW", 0, 40, 1);
     delay(500);
   }
 
-  if (data.humidity > 40){
+  if (data.humidity > 80){
     display.clearDisplay();
     print_line("HUMIDITY HIGH", 0, 50, 1);
     delay(500);
-  } else if (data.temperature < 20){
+  } else if (data.humidity < 65){
     display.clearDisplay();
     print_line("HUMIDITY LOW", 0, 50, 1);
     delay(500);
   }
+}
+
+void set_timezone(){
+  float temp_offset = UTC_OFFSET;
+
+  while(true){
+    display.clearDisplay();
+    print_line("UTC + "+String(temp_offset, 1), 0, 0, 2);
+
+    int pressed = wait_for_button_press();
+    switch(pressed){
+      case(PB_UP):
+        delay(200);
+        temp_offset += 0.5;
+        if (temp_offset > 14.0){
+          temp_offset = -12.0;
+        }
+        break;
+      case(PB_DOWN):
+        delay(200);
+        temp_offset -= 0.5;
+        if(temp_offset < -12.0){
+          temp_offset = 14.0;
+        }
+        break;
+      case(PB_OK):
+        delay(200);
+        UTC_OFFSET = temp_offset;
+        break;
+      case(PB_CANCEL):
+        delay(200);
+        return;
+    }
+    if(pressed == PB_CANCEL || pressed == PB_OK){
+      // If the user pressed cancel or ok, break the loop
+      delay(200);
+      break;
+    }
+  }
+  
+  display.clearDisplay();
+  print_line("Timezone is set", 0, 0, 2);
+  delay(1000);
+
+  configTime(UTC_OFFSET*3600, UTC_OFFSET_DST, NTP_SERVER);
+  return;
 }
