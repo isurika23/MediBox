@@ -384,8 +384,8 @@ void set_time(){
 }
 
 void set_alarm(int alarm){
-  int alarm_hour = alarm_hours[alarm];
-  int alarm_minute = alarm_minutes[alarm];
+  int alarm_hour = (alarm_hours[alarm] != -1) ? alarm_hours[alarm] : 0;
+  int alarm_minute = (alarm_minutes[alarm] != -1) ? alarm_minutes[alarm] : 0;
 
   while(true){
     display.clearDisplay();
@@ -553,5 +553,41 @@ void view_active_alarms(){
 }
 
 void delete_alarm(){
-  delay(200);
+  int alarm_to_delete = 0;
+  while(true){
+    display.clearDisplay();
+
+    print_line("Delete Alarm: "+String(alarm_to_delete+1), 0, 0, 2);
+
+    int pressed = wait_for_button_press();
+    
+    switch(pressed){
+      case(PB_DOWN):
+        delay(200);
+        alarm_to_delete = (alarm_to_delete + 1) % n_alarm;
+        break;
+      case(PB_UP):
+        delay(200);
+        alarm_to_delete = (alarm_to_delete - 1 + n_alarm) % n_alarm;
+        break;
+      case(PB_OK):
+        delay(200);
+        alarm_hours[alarm_to_delete] = -1;
+        alarm_minutes[alarm_to_delete] = -1;
+        display.clearDisplay();
+        print_line("Deleted Alarm "+String(alarm_to_delete+1), 0, 0, 2);
+        delay(1000);
+        break;
+      case(PB_CANCEL):
+        delay(200);
+        break;
+    }
+
+    if(pressed == PB_CANCEL){
+      // If the user pressed cancel, break the loop
+      delay(200);
+      break;
+    }
+  }
+  
 }
