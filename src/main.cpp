@@ -35,6 +35,8 @@ void set_time();
 void set_alarm(int alarm_number);
 void check_temp();
 void set_timezone();
+void view_active_alarms();
+void delete_alarm();
 
 // Time global variables
 int days = 0;
@@ -71,7 +73,9 @@ String modes[] = {
   "2 - Set time",
   "3 - Set Alarm 1",
   "4 - Set Alarm 2",
-  "5 - Disable Alarms"
+  "5 - Disable Alarms",
+  "6 - View Active Alarms",
+  "7 - Delete Alarm"
 };
 int max_modes = sizeof(modes)/sizeof(modes[0]);
 
@@ -302,6 +306,11 @@ void run_mode(int mode){
       display.clearDisplay();
       print_line("Disabled Alarms", 0, 0, 2);
       break;
+    case 5:
+      view_active_alarms();
+      break;
+    case 6:
+      delete_alarm();
   }
 }
 
@@ -510,4 +519,34 @@ void set_timezone(){
 
   configTime(UTC_OFFSET*3600, UTC_OFFSET_DST, NTP_SERVER);
   return;
+}
+
+void view_active_alarms(){
+  while(true){
+    int active_alarms = 0;
+    display.clearDisplay();
+    for (int i = 0; i < n_alarm; i++){
+      if(!alarm_triggered[i] && alarm_hours[i] != -1 && alarm_minutes[i] != -1){
+        active_alarms++;
+        print_line("Alarm " + String(i + 1) + ": " + String(alarm_hours[i]) + ":" + String(alarm_minutes[i]), 0, i * 10, 1);
+      }
+    }
+    if(active_alarms == 0){
+      display.clearDisplay();
+      print_line("No active alarms", 0, 0, 2);
+      delay(2000);
+    }
+
+    int pressed = wait_for_button_press();
+    if (pressed == PB_CANCEL || pressed == PB_OK){
+      delay(200);
+      break;
+    }
+  }
+  
+  return;
+}
+
+void delete_alarm(){
+  delay(200);
 }
