@@ -27,7 +27,7 @@ void print_line(String text, int column, int row, int textSize);
 void print_time_now();
 void update_time();
 void update_time_with_check_alarm();
-void ring_alarm();
+void ring_alarm(int alarm);
 void go_to_menu();
 int wait_for_button_press();
 void run_mode(int mode);
@@ -191,7 +191,7 @@ void update_time(){
   days = atoi(time_day);
 }
 
-void ring_alarm(){
+void ring_alarm(int alarm){
   display.clearDisplay();
   print_line("Medicine Time", 0, 0, 2);
 
@@ -201,17 +201,34 @@ void ring_alarm(){
   // Play buzzer
   // Serial.println(String(digitalRead(PB_CANCEL)));
 
-  bool alarm_cancelled = false;
+  bool alarm_break = false;
 
-  while(!alarm_cancelled && digitalRead(PB_CANCEL) == HIGH){
+  while(!alarm_break && digitalRead(PB_OK) == HIGH && digitalRead(PB_CANCEL) == HIGH){
     for (int i= 0; i<n_notes; i++){
-      if(digitalRead(PB_CANCEL) == LOW){
+      if(digitalRead(PB_OK) == LOW){  // ok => stop alarm
         delay(200);
-        alarm_cancelled = true;
+        alarm_break = true;
         break;
       }
+
+      if(digitalRead(PB_CANCEL) == LOW){  // cancel => snooze for 5 minutes
+        delay(200);
+        alarm_break = true;
+        alarm_minutes[alarm] = alarm_minutes[alarm] + 5;
+        if(alarm_minutes[alarm] >= 60){
+          alarm_hours[alarm] = (alarm_hours[alarm] + 1) % 24;
+          alarm_minutes[alarm] = (alarm_minutes[alarm] + 5) % 60;
+        }
+        alarm_triggered[alarm] = false;
+        display.clearDisplay();
+        print_line("Snoozed for 5 min", 0, 0, 2);
+        delay(1000);
+        break;
+      }
+      digitalWrite(LED_1, HIGH);
       tone(BUZZER, notes[i]);
       delay(500);
+      digitalWrite(LED_1, LOW);
       noTone(BUZZER);
       delay(2);
     }
@@ -231,8 +248,7 @@ void update_time_with_check_alarm(){
     for(int i = 0; i < n_alarm; i++){
       if(!alarm_triggered[i] && alarm_hours[i] == hours && alarm_minutes[i] == minutes){
         // Serial.println("Alarm triggered");
-        ring_alarm();
-        alarm_triggered[i] = true;
+        ring_alarm(i);
       }
     }
   }
@@ -444,6 +460,8 @@ void set_alarm(int alarm){
       break;
     }
   }
+
+  alarm_enabled = true;
   
   alarm_triggered[alarm] = false;
   display.clearDisplay();
@@ -589,5 +607,4 @@ void delete_alarm(){
       break;
     }
   }
-  
 }
